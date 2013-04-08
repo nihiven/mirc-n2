@@ -64,9 +64,10 @@ alias theme.list {
 
 ;;;;;;;;;;;;;;;; popups
 menu Status {
-  n2 Themes
-  .List all:theme.list
-  .$submenu($theme.menu($1))
+  n2 Config
+  .Themes
+  ..List all:theme.list
+  ..$submenu($theme.menu($1))
 }
 
 alias -l theme.menu {

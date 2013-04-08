@@ -18,7 +18,13 @@ n0=initial release
 n0=version sync
 #version end
 
+/*
+fix this stuff
+stop indexing when no changes are made to the library
+remove existing instances of file from previous list when adding an instance
+dont think minimum repeat is working
 
+*/
 
 
 /*
@@ -384,16 +390,16 @@ alias -l n2unes.play {
   n2unes.recent $1 %f
 }
 
-alias n2unes.count {
+alias -l n2unes.count {
   _set.count $_get.song($1)
 }
 
-alias n2unes.message {
+alias -l n2unes.message {
   _e $nopath($_get.song($1)) : $+($_get.count($_get.song($1)),x)
   ;msg #nvn $nopath($_get.song($1)) : $+($_get.count($_get.song($1)),x)
 }
-;;; need to fix
-alias n2unes.recent {
+
+alias -l n2unes.recent {
   if ($isid) {
     if ($1 isnum) { return $pull(mp3.recent,$1) }
     else { return $pull(mp3.recent,$pullm(mp3.recent,$wild($2-),1).data) }
@@ -409,10 +415,10 @@ alias n2unes.recent {
   }
 }
 ;; menu helper
-alias mp3.rm {
+alias -l mp3.rm {
   if ($1 isnum) {
     var %f $n2unes.recent($1)
-    if (%f && $1 <= 20) { return $+([,$iif($1 < 10,$+(0,$1),$1),],) $nopath($longfn(%f))) $+ :mp3 -recent $1 }
+    if (%f && $1 <= 10) { return $+([,$iif($1 < 10,$+(0,$1),$1),],) $nopath($longfn(%f))) $+ :mp3 -recent $1 }
   }
 }
 

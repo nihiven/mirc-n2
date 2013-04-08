@@ -430,15 +430,16 @@ alias _refresh.run {
 
 ;;;;;;;;;;MENUS;;;;;;;;;;;;
 menu status {
-  Update
-  .Check:update
-  .Force:update 1
-  .-
-  .version.txt
-  ..Refresh:update -r
-  ..View:run $+($_temp,version.txt)
-  .-
-  .$style($iif($pu(update.auto),1,$null)) Automatic:toggle update.auto Automatic Update
+  n2 Config
+  .Update
+  ..Check:update
+  ..Force:update 1
+  ..-
+  ..version.txt
+  ...Refresh:update -r
+  ...View:run $+($_temp,version.txt)
+  ..-
+  ..$style($iif($pu(update.auto),1,$null)) Automatic:toggle update.auto Automatic Update
 }
 
 
