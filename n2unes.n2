@@ -65,7 +65,7 @@ alias -l _get.count {
   var %c $pull(n2unes.count,%f)
   return $iif(%c == $null,0,%c)
 }
-alias -l _get.song {
+alias _get.song {
   var %f $pull(n2unes.index,$1)
 
   if (%f != $null) { return %f }
@@ -307,6 +307,9 @@ alias -l _directory {
 ;;;;;;;;;;;;; main n2unes alias ;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 alias mp3 {
+  ;; song id to play
+  var %song.id
+
   if ($1 == ?) {
     _e 
     _e /mp3 [-r]
@@ -315,6 +318,7 @@ alias mp3 {
     return
   }
 
+  ;; wtf is this
   if ($1 == f || $1 == fav) {
     ea add last played file to favorites
     n2unes.fav
@@ -329,13 +333,14 @@ alias mp3 {
     return
   }
 
-  if ($1 == -r) { 
-    n2unes.play $n2unes.random
-    return
-  }
+  if ($1 == -r || $1 == -random) { %song.id = $n2unes.random }
 
-  var %i $_get.song($1-)
-  if (%i != $null) { n2unes.play %i }
+  if ($1 == -recent) { %song.id = $_get.song($n2unes.recent($2)) }
+
+  ;; if all else failes, search for song 
+  if (%song.id == $null) {  %song.id = $_get.song($1-) } 
+
+  if (%song.id != $null) { n2unes.play %song.id }
   else { esi 1 no match for $1- }
 
 }
@@ -343,8 +348,15 @@ alias mp3 {
 
 alias -l n2unes.play {
   ;;; $1 is the files idx#
+  var %f
 
-  var %f $"($_get.song($1))
+  if ($1 == -f) {
+    ;; play from a file name
+  }
+  else { 
+    ;; play from an index
+    %f = $"($_get.song($1))
+  }
 
   if (!$isfile(%f)) {
     _e Bad File: %f
@@ -383,17 +395,24 @@ alias n2unes.message {
 ;;; need to fix
 alias n2unes.recent {
   if ($isid) {
-    if ($1 isnum) { return $shortfn($pull(mp3.recent,$1)) }
-    else { return $pull(mp3.recent,$pullm(mp3.recent,$wild($1-),1).data) }
+    if ($1 isnum) { return $pull(mp3.recent,$1) }
+    else { return $pull(mp3.recent,$pullm(mp3.recent,$wild($2-),1).data) }
   }
   else { 
-    var %i 10,%m
+    var %i 50,%m
     while (%i > 1) {
       %m = $pull(mp3.recent,$calc(%i - 1))
       if (%m) { push mp3.recent %i %m }
       dec %i
     }
-    push mp3.recent 1 $longfn($1-)
+    push mp3.recent 1 $longfn($2-)
+  }
+}
+;; menu helper
+alias mp3.rm {
+  if ($1 isnum) {
+    var %f $n2unes.recent($1)
+    if (%f && $1 <= 20) { return $+([,$iif($1 < 10,$+(0,$1),$1),],) $nopath($longfn(%f))) $+ :mp3 -recent $1 }
   }
 }
 
@@ -442,9 +461,14 @@ alias n2unes.random.repeat {
   }
 }
 
-alias n2unes.hotkeys {
+alias -l n2unes.hotkeys {
   ;; instead of cluttering the main alias with these
   ;; keep all shortcut key logic here
+
+  ;; a little junk here, we're handling random differntly
+  ;; since it comes from the script and not the player
+  if ($1 == -r) { mp3 -r | return }
+
   var %cmd 
   var %s -n,-p,-s,-c,-k
 
@@ -488,7 +512,7 @@ menu Status,Channel {
   .$style(2) Control:noop
   .Play Random [F12]:mp3 -r
   .Play Recent
-  ..Something here:noop
+  ..$submenu($mp3.rm($1))
   .-
   .Settings
   ..$style(2) General:noop
