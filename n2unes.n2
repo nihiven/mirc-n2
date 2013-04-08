@@ -19,7 +19,7 @@ n0=version sync
 #version end
 
 
-//"C:\Program Files\foobar2000\foobar2000.exe" /prev
+
 
 /*
 ;;; settings values
@@ -33,7 +33,11 @@ startup.index: checks indexed files vs existing files, updates index if needed
 */
 
 ;;; F KEYS BABY
-alias f12 mp3 -r
+alias f1 n2unes.hotkeys -s
+alias f4 n2unes.hotkeys -p
+alias f5 n2unes.hotkeys -n
+alias f12 n2unes.hotkeys -r
+
 
 ;;; local aliases
 alias -l _e esi 1 n2unes: $1-
@@ -435,6 +439,29 @@ alias n2unes.random.repeat {
   }
   else {
     _e Please supply a numeric value less than or equal to $_songs $+ .
+  }
+}
+
+alias n2unes.hotkeys {
+  ;; instead of cluttering the main alias with these
+  ;; keep all shortcut key logic here
+  var %cmd 
+  var %s -n,-p,-s,-c,-k
+
+  if ($_player.name == Foobar) {
+    %cmd = /next,/prev,/playpause,/config,/exit
+  }
+  if ($_player.name == Winamp) {
+    _e Winamp not suppported yet.
+  }
+
+  ;; validate switch
+  var %f $findtok(%s,$1,44)
+  if (%f > 0) {
+    run $_player $gettok(%cmd,%f,44)
+  }
+  else {
+    _e Unknown shortcut: $1
   }
 }
 
