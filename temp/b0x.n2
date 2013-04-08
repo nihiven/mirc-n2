@@ -1,0 +1,73 @@
+#info off
+[update]
+name=b0x
+version=0.3
+required=0
+requires=main.n2
+author=nihiven
+email=jb@nihiven.net
+desc=random stuff, remove from install
+file=b0x.n2
+#info end
+
+#version off
+[0.3]
+n0=added signals
+#version end
+
+;$input(Would you like to configure the n2unes audio player?,yvq,n2unes)
+
+on *:text:*:*: {
+  if ($nick == niphone) {
+    if ($1 == !next) { run $pull(n2unes,player) /next }
+    elseif ($1 == !prev) { run $pull(n2unes,player) /prev } 
+    elseif ($1 == !play) { run $pull(n2unes,player) /playpause }
+    else { mp3 $remove($1-,/,|) }
+  }
+}
+on *:text:!next*:*:
+on *:text:!prev*:*:
+on *:text:!play*:*:
+
+;;;;;;;;;;;;;;;;;;;;
+alias b0x {
+  if ($prop == version) { return $readini($script,update,version) }
+}
+
+;;;;;; things you probably will never use ;;;;;;;;;
+menu Status,Channel,Menubar {
+  -
+  b0x
+  .$iif($pu(debug),$style(1)) Debug:pn debug $negate($pu(debug))
+  .-
+  .Dump n2:spit n2
+  .Dump All:spit
+  .-
+  .Env. Info:environment.info
+  .Events:event.scan 
+}
+
+
+alias nlg { msg $active not | .timer 1 1 msg $active lookin | .timer 1 2 msg $active good }
+
+;;;;;;;;;;;; some events
+
+
+;;; event scanning
+alias event.scan {
+  var %i $script(0)
+
+  esb Event Scan
+  while (%i) {
+    var %f $nopath($script(%i))
+
+    esi 1 %f $+ : $+(,$iif($isalias($+(%f,.default)),9,4),default) $+(,$iif($isalias($+(%f,.install)),9,4),install) $+(,$iif($isalias($+(%f,.startup)),9,4),startup) $+(,$iif($isalias($+(%f,.shutdown)),9,4),shutdown) $+(,$iif($isalias($+(%f,.load)),9,4),load) $+(,$iif($isalias($+(%f,.tick)),9,4),tick) $+(,$iif($isalias($+(%f,.tick5)),9,4),tick5) $+(,$iif($isalias($+(%f,.tick30)),9,4),tick30) $+(,$iif($isalias($+(%f,.update.pre)),9,4),update.pre) $+(,$iif($isalias($+(%f,.update.post)),9,4),update.post) 
+
+    dec %i
+  }
+  ese Done
+}
+
+
+alias temp run C:\Users\nihiven\AppData\Roaming\mIRC\n2\temp\
+alias b0x.n2.titlebar return Be well on $scon(1).$network

@@ -1,0 +1,120 @@
+#info off
+[update]
+name=n2 sockets
+version=1.0
+required=1
+requires=main.n2,dpr.n2
+author=nihiven
+email=jb@nihiven.net
+desc=n2 socket script
+file=socks.n2
+#info end
+
+#version off
+[0.1]
+n0=initial release
+[0.3]
+n0=version sync
+[1.0]
+n0=gold standard 1.0
+#version end
+
+
+;; dload will download the given file to the given destination
+;; when the download completes or an error occurs, the callback function will be invoke
+;; callback.function $true = download ok
+;; callback.function $false = download failed
+
+; /dload n2.nihiven.com 80 /update/version.txt n2\temp\version.txt echo 4 -a suck it biiitch
+
+;; shortcuts
+alias -l _s push socks $1 $2-
+alias -l _g return $pull(socks,$1)
+alias -l _d trip socks $1
+alias -l _m return $sock($1).mark
+
+;; identifiers
+alias -l _nextSock {
+  var %i = 1
+
+  while (%i < 100) { 
+    var %newSock = $+(dload.,%i)
+    if (!$sock(%newSock)) { return %newSock } 
+    inc %i
+  } 
+
+  ea too many socks
+  return $false
+}
+
+;; actions
+alias dload  {
+  if ($1 == $null) { ea specify an address to connect to | return }
+  if ($2 == $null) { ea specify a port to connect to | return }
+  if ($3 == $null) { ea specify a file to download | return }
+  if ($4 == $null) { ea specify a file to write to | return }
+
+  ; get next sock name
+  var %sockName = $_nextSock
+
+  ; remove settings for sock name
+  _clearSock %sockName
+
+  ; clear target file
+  var %f $dir($4).temp
+
+  if ($isfile(%f)) { .remove %f }
+
+  ; store source and target
+  _s $+(%sockName,.GET) $3
+  _s $+(%sockName,.WRITE) $4
+  _s $+(%sockName,.CALLBACK) $5-
+
+  ; open sock
+  sockopen %sockName $1 $2
+}
+
+alias -l _GET {
+  if ($1 == $null) { ea specify a socket to use | return }
+  if ($sock($1).name == $null) { ea sock $1 does not exist | return }
+  if ($_g($+($1,.GET)) == $null) { ea no GET value stored for $1 | return }
+
+  sockmark $1 $true
+  sockwrite -n $1 GET $_g($+($1,.GET))
+  sockwrite -n $1 Host: $sock($1).addr
+  sockwrite -n $1 User-Agent: $+(n2/,$nvn().version) ( $+ $os $+ ; mIRC $version $+ )
+  sockwrite $1 $crlf
+}
+
+alias -l _clearSock {
+  _d $+($1,.GET)
+  _d $+($1,.WRITE)
+  _d $+($1,.CALLBACK)
+}
+
+alias -l _closeSock {
+  var %callback $_g($+($1,.CALLBACK))
+  if ($isalias(%callback)) { %callback $2 }
+}
+
+;; events
+on *:sockopen:dload.*: {
+  _GET $sockname
+}
+
+on *:sockread:dload.*: {
+  var %d
+  var %f $dir($_g($+($sockname,.WRITE))).temp
+  sockread %d
+
+  while ($sockbr && !sockerr) {
+    if ($_m($sockname)) { if (%d == $null) { sockmark $sockname $false } }
+    else { write %f %d }
+
+    sockread %d
+  }
+}
+
+on *:sockclose:dload.*: {
+  _closeSock $sockname $true
+}

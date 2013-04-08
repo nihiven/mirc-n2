@@ -1,0 +1,580 @@
+#info off
+[update]
+name=n2 main
+version=0.3
+required=1
+requires=dpr.n2
+author=nihiven
+email=jb@nihiven.net
+desc=n2 main script
+file=main.n2
+#info end
+
+#version off
+[0.2]
+n0=initial release
+[0.3]
+n0=added signals
+#version end
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;; script identifiers ;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias " return $qt($1-)
+alias dir {
+  var %d = $mircdir
+  var %n2 $"($+($mircdir,n2\))
+
+  if (!$isdir(%n2)) { .mkdir %n2 }
+
+  if ($prop == temp) { %d = $+(%d,n2\temp\) }
+  elseif ($prop == settings) { %d = $+(%d,n2\settings\) }
+  elseif ($prop == dll) { %d = $+(%d,n2\dll\) }
+  elseif ($prop == graphics) { %d = $+(%d,n2\graphics\) }
+  elseif ($prop == download) { %d = $+(%d,n2\download\) }
+  elseif ($prop == backup) { %d = $+(%d,n2\backup\) }
+  elseif ($prop == nvn) { ea old dir().nvn use prop .n2 %d = $+(%d,n2\) }
+  elseif ($prop == n2) { %d = $+(%d,n2\) }
+  else { return $+(%d,$1-) }
+
+  if (!$isdir($"(%d))) { mkdir $"(%d) }
+
+  return $"($+(%d,$1))
+}
+alias drives {
+  var %i = 99, %d, %x
+  while (%i < 123) {
+    %x = $chr(%i)
+    if ($disk($chr(%i))) { 
+      if ($1) { %x = $+(%x,:\) }
+      %d = $addtok(%d,%x,44)  
+    }
+    inc %i
+  }
+  return %d
+}
+alias isignore {
+  if ($ignore($address($1,3))) { return $true }
+  return $false
+}
+alias mode.nick {
+  var %m
+  if ($nick($1,$2,v)) { %m = + }
+  if ($nick($1,$2,o)) { %m = @ }
+  return %m
+}
+alias negate {
+  if ($1 = yes) { return no }
+  if ($1 = no) { return yes }
+  if ($1 = 1) { return 0 }
+  if ($1 = 0) { return 1 }
+  if ($1 = $null) { return 1 }
+}
+alias nvn {
+  if ($prop == version) { return 0.3 }
+  if ($prop == tag) { 
+    var %e n2(<v>):,screamstyle<v>, bendinglight ,nihiven(<v>),nihiven $+ <v>,screamstyle<v>
+    return $replace($gettok(%e,$rand(1,$gettok(%e,0,44)),44),<v>,0.1)
+  }
+  if ($prop == quote) {
+    var %q You're only screwed if it stops responding.,Giving you options.,Reasonable and sensible.,The gentle hum of anxiety.
+    return $gettok(%q,$rand(1,$gettok(%q,0,44)),44)
+  }
+}
+alias percent return $round($calc(100 * $calc($1 / $2)),2)
+alias res {
+  var %res = $gettok($1,1,32)  
+  if ($prop == res) { return %res }
+  elseif ($prop == msg) { return $gettok($1,2-,32) }
+  else { return %res }
+}
+alias sdur return $remove($replace($duration($1-),wks,w,wk,w,days,d,day,d,hrs,h,hr,h,mins,m,min,m,secs,s,sec,s),$chr(32))
+alias trailing.slash {
+  return $iif($right($1-,1) = \,$1-,$+($1-,\))
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;; script aliases;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias c clear
+alias deop mode $active -o $1
+alias dll.check {
+  var %f $dir($1).dll
+  if ($isfile($1)) { .rename $1 %f }
+  elseif ($isfile(%f)) {
+    $+(.timer,$1) off 
+    return $true
+  }
+  else { 
+    if (!$timer($1)) { $+(.timer,$1) -o 0 1 dll.check $1 }
+  } 
+}
+alias environment.info {
+  esb Environment Info
+  esi 1 Windows $os 
+  esi 1 mIRC $version $bits $+ bit
+  esi 1 mIRC Dir: $mircdir
+  esi 1 Script Dir: $scriptdir
+  ese Done
+}
+alias file.to.var {
+  var %res
+  var %i = $lines($1-)
+  var %x = 1
+  while (%x <= %i) {
+    %file.to.var = $+(%file.to.var, $read($1-,%x))
+    inc %x
+  }
+}
+alias _l {
+  if ($pu(debug)) {
+    write n2_debug.log $timestamp $1-
+  }
+}
+alias mm {
+  var %x 1,%m $+($left($1,1),$str($right($1,1),4))
+  tokenize 32 $2-
+  while (%x <= $0) { 
+    mode # %m $eval($+($,%x,-,$calc(%x + 3)),2)
+    inc %x 4
+  }
+}
+alias op mode $active +o $1
+alias toggle {
+  var %e $negate($pu($1)),%m
+  pn $1 %e
+  if ($show) {
+    if (%e) { %m = Enabled }
+    else { %m = Disabled }
+    em  $+ $2- $+ : %m
+  }
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; INSTALL ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias default {
+  esb Loading Defaults
+
+  if ($pu(version)) { goto $pu(version) }
+
+  :0.1
+  esi 1 v0.1
+
+  ;; install functions
+  install.directories
+  default.colors
+  default.font
+
+  ;logos
+  pn logo [nvn]::
+  pn logol [nvn|<l>]::
+
+  ;update
+  pn update.auto 1
+
+  ; store version
+  pn version $nvn().version
+
+  .saveini
+  .flushini
+
+  ese Done
+}
+alias default.colors {
+  var %schemes $ini(mirc.ini,colors,0)
+  var %m $"($mircini)
+
+  ; first set
+  writeini %m colors $+(n,%schemes) nvn,2,15,4,11,15,15,15,15,15,15,15,0,15,15,15,0,15,15,15,15,0,1,0,1,0,15,0,2,2,0
+  writeini %m palettes $+(n,%schemes) 16777215,0,6572348,37632,255,127,10223772,32764,65535,64512,9671424,13217927,16515072,16711935,8355711,13816530
+
+  ; second set
+  inc %schemes
+  writeini %m colors $+(n,%schemes) nvn dark,2,15,4,12,15,15,15,15,15,15,15,0,15,15,15,0,15,15,15,15,11,1,0,1,0,14,0,2,2,0
+  writeini %m palettes $+(n,%schemes) 16777215,0,4403239,37632,255,127,10223772,32764,65535,64512,9671424,13217927,12615680,16711935,8355711,13816530
+
+  ; load it up
+  color -l
+  color -s nvn dark
+}
+alias default.font font -z 10 Verdana
+alias install {
+  esb Installing n2
+
+  ;; create directories
+  esi 1 creating directories...
+  var %i = $findfile($dir().n2, *.n2, 0)
+  while (%i) {
+    var %f = $"($findfile($dir().n2, *.n2, %i))
+    var %n = $readini(%f, update, name)
+    if ($readini(%f, update, req)) {
+      if (!$script(%f)) { esi 1 loading %n | .load -rs %f }
+      else { esi 1 %n already loaded }
+    }
+    else {
+      if (%debug) { esi 1 skipping %n }
+    }
+
+    dec %i
+  }
+
+  ;; load scripts
+  esi 1 loading scripts...
+  %i = $findfile($scriptdir,*.n2,0)
+
+  while (%i) {
+    var %f = $"($findfile($scriptdir,*.n2,%i))
+    if ($script(%f) == $null) { .load -rs %f }
+    dec %i
+  }
+
+  trigger.event install
+
+  ;; check for updates
+  if ($isalias(update)) { .timerupdate 1 2 update }
+  else { esi 1 unable to update: script not found }
+
+  esi 1 Welcome to n2
+  ese Done
+}
+
+alias install.directories {
+  .mkdir $dir().n2
+  .mkdir $dir().temp
+  .mkdir $dir().settings
+  .mkdir $dir().dll
+  .mkdir $dir().graphics
+  .mkdir $dir().download
+  .mkdir $dir().backup
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; script related ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias n2.load {
+  if ($0 == 0) { 
+    ea /n2.load <script name>
+    return 
+  }
+
+  tokenize 44 $1-
+  var %i $0
+
+  if (%1 = 1) {
+    esb Load Script
+  }
+  else {
+    esb Load Scripts
+  }
+
+  while (%i) {
+    var %f $eval($+($chr(36),%i),2)
+    var %n $readini(%f,update,name)
+    var %r $readini(%f,update,required)
+
+    if ($script(%f) != $null) { esi 1 $+(%n,:,$chr(32),script already loaded) }
+    else { 
+      .load -rs %f
+      esi 1 loaded: %n
+    }
+
+    dec %i
+  }
+
+  ese Done
+}
+
+alias n2.unload {
+  if ($0 == 0) { 
+    ea /n2.unload <script name>
+    return 
+  }
+
+  esb Unload Scripts
+  tokenize 44 $1-
+  var %i $0
+
+  while (%i) {
+    var %p $eval($+($chr(36),%i),2)
+    var %f $script(%p)
+    var %r $readini(%f,update,required)
+
+    if (%f == $null) { esi 1 $+(%p,:,$chr(32),not loaded) }
+    elseif (%r) {
+      var %n $readini(%f,update,name)
+      esi 1 Can't unload required script: %n
+    }
+    else { 
+      .unload -rs %f
+      esi 1 unloaded: $nopath(%p)
+    }
+
+    dec %i
+  }
+
+  ese Done
+}
+
+alias n2.scripts {
+  if ($1 isnum) {
+    var %i $1-1
+    var %f = $"($findfile($dir().n2, *.n2, $1))
+    var %n = $readini(%f, update, name)
+    var %sf = $readini(%f, update, file)
+    var %d = $readini(%f, update, desc)
+    var %r = $readini(%f, update, required)
+    var %l = $script(%sf)
+
+    return $iif(%l,$style(1)) $+(%n,$chr(32),$iif(%r,[req]),:,$iif(%l,.n2.unload,.n2.load)) %f 
+  }
+  if ($1 isin begin,end) { return - }
+}
+
+alias n2.list {
+  var %i $findfile($dir().n2, *.n2, 0)
+  var %t 1
+  esb Available Scripts
+  while (%i) {
+    var %f = $"($findfile($dir().n2, *.n2, %i))
+    var %n = $readini(%f, update, name)
+    var %d = $readini(%f, update, desc)
+    var %r = $readini(%f, update, required)
+    var %v = $readini(%f, update, version)
+    var %cb = $iif($script(%f),9,4)
+    var %ce = 
+
+    esi 1 $+(,[,%cb,,$str(0,$calc(2 - $len(%t))),%t,%ce,]) $+ : $+(,%n,$chr(32),%v,) : %d
+
+    dec %i
+    inc %t
+  }
+  ese Done
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; system aliases ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias shutdown { 
+  save.all
+  trigger.event shutdown
+  n2.titlebar $nvn().version
+}
+alias startup {
+  ; check for installation
+  if (!$pu(version) || $pu(version) != $nvn().version) { 
+    install 
+    default 
+  }
+
+
+
+  es $nvn().tag
+  es $nvn().quote
+
+  if ($pu(mirc_version) != $version) {
+    var %mirc_version $pu(mirc_version)
+    es mIRC: Upgraded to $version from %mirc_version
+  }
+
+  pn mirc_version $version
+  ; system ticks
+  .timersystem.tick 0 1 system.tick
+  .timersystem.tick5 0 5 system.tick5
+  .timersystem.tick30 0 30 system.tick30
+
+  trigger.event startup
+}
+alias system.tick30 {
+  trigger.event tick30
+}
+alias system.tick {
+  trigger.event tick
+}
+alias system.tick5 {
+  trigger.event tick5
+}
+alias trigger.event {
+  var %i = $script(0)
+
+  if ($1 !isin tick,tick5,tick30) {
+    _l TE: $1-
+  }
+
+  if ($pu(debug)) { signal $1- }
+  else { .signal $1- }
+}
+alias n2.titlebar {
+  titlebar : n2 : $trigger.ident(titlebar)
+}
+alias trigger.ident {
+  var %r
+  var %i = $script(0)
+
+  while (%i) {
+    var %alias $+($nopath($script(%i)),.,$1)
+    if ($isalias(%alias)) { 
+      %r = %r : $eval($+($,%alias),2) 
+    }
+
+    dec %i
+  }
+
+  return %r
+}
+
+;;;;;;;;;;;;;;;; system events ;;;;;;;;;;;;;;;;;;
+on *:exit:shutdown
+on *:start:startup
+
+
+;;;;;;;;;;;;;;;;; signal events ;;;;;;;;;;;;;;;
+on *:SIGNAL:tick: {
+  n2.titlebar $iif($scon($cid).status == connected,$+(idle[,$sdur($idle),]),Disconnected)
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;popups ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+menu Status {
+  n2 Scripts
+  .List all:n2.list
+  .Load all:whaat
+  ; .$submenu($n2.scripts($1))
+}
+
+menu channel,status,query {
+  /clear:clear
+  -
+}
+menu nicklist {
+  $+($mode.nick(#,$$1),$$1) $iif($clone.nick(#,$$1),$+($chr(40),$clone.nick(#,$$1),$chr(41)))
+  .$iif($clone.nick(#,$$1),Whois Clones):whois $remove($clones(#,$address($1,3)),$chr(44))
+  .-
+  .Whois:whois $$1
+  .Dns:dns $$1
+  .Uwho:uwho $$1
+  .-
+  .$iif($isignore($$1),-Ignore,+Ignore):ignore $iif($isignore($$1),-r $$1,$$1) 3
+  -
+  Ctcp
+  .Ping:ctcp $$1 ping
+  .Time:ctcp $$1 time
+  .Version:ctcp $$1 version
+  .-
+  .Custom:ctcp $$1 $$input(/ctcp $1 ?,1, - Custom CTCP)
+  Dcc
+  .Send:dcc send $$1
+  .Chat:dcc chat $$1
+  -
+  $iif($me isop #,Control)
+  .$iif($nick(#,$$1,o),Deop,Op):mm $iif($nick(#,$$1,o),-o,+o) $1-
+  .$iif(!$nick(#,$$1,o),$iif($nick(#,$$1,v),Devoice,Voice)):mm $iif($nick(#,$$1,v),-v,+v) $1-
+  .-
+  .Kick:kick # $$1 piss off
+  .DOBK:mode # -o $$1 | ban $$1 3 | kick # $$1 DOBK!
+}
+menu query {
+  $iif($isignore($$1),-Ignore,+Ignore):.ignore $iif($isignore($$1),-r $$1,$$1) 3 | em $iif($isignore($$1),Ignoring,No longer ignoring) $$1.
+  -
+  CTCP
+  .Ping:/ctcp $$1 ping
+  .Time:/ctcp $$1 time
+  .Version:/ctcp $$1 version
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;; UI ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; prefixed active
+alias ea echo -a $pre $1-
+; status                     
+alias es echo -s $+(,$color(notice),$pre,) $1-
+
+; begin/end block
+;alias esb eb | echo -a $+(,$color(notice),[0,$1-,,$color(notice),])
+;alias ese echo -a $+(,$color(notice),|0,$1-,,$color(notice),]) 
+alias esb eb | esi 1 $+(,$1-,)
+alias ese esi 1 $+(,$1-,)
+
+
+; highlight
+alias eh echo -a $+(,$color(highlight),$pre,) $1-
+; indent
+alias esi echo -a $+(,$color(notice),$prei($1),) $2-
+; no prefix
+alias esn echo -a $1-
+; spacer
+alias eb esn 
+; single msg
+alias em echo -a $logo $1-
+alias eml echo -a $logol($1) $2-
+
+
+alias logo return $+(,$color(notice),$pu(logo),)
+alias logol return $+(,$color(notice),$replace($pu(logol),<l>,$1),)
+alias pre return |
+alias prei return $+(|,$str( ,$1),)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;; event ;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+on *:notice:*:*:ea $1- | halt
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;; raw ;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; whois
+raw 311:*: { 
+  esb whois $2
+  esi 2 $+($3,@,$4)
+  esi 2 $6-
+  halt
+}
+raw 319:*: {
+  esi 2 $3-
+  halt
+}
+raw 338:*:esi 2 $3 | halt
+raw 312:*:halt
+raw 317:*:esi 1 Idle $sdur($3) | halt
+raw 301:*:esi 1 $3- | halt
+raw 318:*:halt
+
+;;; channel
+raw 353:*:esi 1 $+(,$3,,:) $4- | halt
+raw 366:*:halt
+raw 324:*:halt
+raw 329:*:halt
+
+;;; motd
+raw 001:*:halt
+raw 002:*:halt
+raw 003:*:halt
+raw 004:*:halt
+raw 005:*:halt
+raw 250:*:halt
+raw 251:*:halt
+raw 252:*:halt
+raw 253:*:halt
+raw 254:*:halt
+raw 255:*:halt
+raw 265:*:halt
+raw 266:*:halt
+raw 372:*:halt
+raw 375:*:halt
+raw 376:*:halt
+
+;;; misc
+raw 401:*:esi 1 No such nick: $2 | halt
+raw 470:*:esi 1 Forwarded from $+(,$2,) to $+(,$3,) | halt

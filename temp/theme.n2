@@ -1,0 +1,121 @@
+#info off
+[update]
+name=n2 themes
+version=0.3
+required=1
+requires=main.n2
+author=nihiven
+email=jb@nihiven.net
+desc=n2 theme script
+file=theme.n2
+#info end
+
+#version off
+[0.1]
+n0=initial release
+[0.3]
+n0=added signals
+#version end
+
+;; info
+alias n2theme {
+  if ($prop == version) { return $readini($script,update,version) }
+}
+
+;;; TODO
+;;; load data from .thm files
+;;; theme
+alias -l _e ea [theme] $1-
+
+;;; shortcuts
+alias -l _dt return $dir(themes\)
+alias -l _df return $dir($+(themes\,$1-,.thm))
+alias -l _tc return $readini($"($mircini),text,theme)
+alias -l _tn return $readini($"($mircini),text,theme)
+
+;;;; list mIRC schemes
+alias scheme.list {
+  var %s $calc($ini(mirc.ini,colors,0) - 1)
+  var %m $"($mircini)
+  esb Available Themes
+  while (%s >= 0) {
+    var %d $readini(%m,colors,$+(n,%s))
+    esi 1 $gettok(%d,1,44)
+    dec %s
+  }
+  ese Done
+}
+
+alias theme.list {
+  var %i $findfile($_dt, *.thm, 0)
+  var %t 1
+  esb Available Themes
+  while (%i) {
+    var %f = $"($findfile($_dt, *.thm, %i))
+    var %n = $readini(%f, theme, name)
+    var %cb = $iif(%n = $_tc,9,4)
+    var %ce = 
+    esi 1 $+(,[,%cb,,$str(0,$calc(2 - $len(%t))),%t,%ce,]) $+ : %n
+    dec %i
+    inc %t
+  }
+  ese Done
+}
+
+;;;;;;;;;;;;;;;; popups
+menu Status {
+  n2 Themes
+  .List all:theme.list
+  .$submenu($theme.menu($1))
+}
+
+alias -l theme.menu {
+  if ($1 isnum) {
+    var %i $1
+    var %f = $"($findfile($_dt, *.thm, $1))
+    var %n = $readini(%f, theme, name)
+    return $iif(%n = $_tc,$style(1)) $+(%n,:,color -s %n)
+  }
+  if ($1 isin begin,end) { return - }
+}
+
+;;;;;;;;;; install ;;;;;;;;;;;;;;;
+alias -l _install {
+  esi 1 n2 theme
+  esi 2 make directories...
+  .mkdir $_dt
+  esi 2 writing themes...
+  writeini $_df(n2) theme name n2
+  writeini $_df(n2) color colors n2,2,15,4,11,15,15,15,15,15,15,15,0,15,15,15,0,15,15,15,15,0,1,0,1,0,15,0,2,2,0
+  writeini $_df(n2) color palettes 16777215,0,6572348,37632,255,127,10223772,32764,65535,64512,9671424,13217927,16515072,16711935,8355711,13816530
+  writeini $_df(n2) font name Verdana
+  writeini $_df(n2) font size 10
+  ; nihiven dark
+  writeini $_df(n2dark) theme name n2 dark
+  writeini $_df(n2dark) color colors nvn dark,2,15,4,12,15,15,15,15,15,15,15,0,15,15,15,0,15,15,15,15,11,1,0,1,0,14,0,2,2,0
+  writeini $_df(n2dark) color palettes 16777215,0,4403239,37632,255,127,10223772,32764,65535,64512,9671424,13217927,12615680,16711935,8355711,13816530
+  writeini $_df(n2dark) font name Verdana
+  writeini $_df(n2dark) font size 10
+  esi 2 Done
+}
+
+alias theme.synch {
+  ; import color schemes from mirc.ini
+  ; need to sync .thm files with mirc.ini
+  ; first read from mirc.ini to create thm files
+  ; then write theme files to mirc.ini
+  ; oh boy!
+}
+
+;;;;;;;;;;startup,install,default,load;;;;;;;;;;;;
+on *:SIGNAL:install: {
+  _install
+}
+on *:SIGNAL:default: {
+}
+on *:SIGNAL:startup: {
+  ;  esi 1 n2 Theme $+ : $n2theme().version
+}
+on *:SIGNAL:load: {
+  esi 1 n2 Theme $+ : $n2theme().version
+}

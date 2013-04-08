@@ -1,0 +1,477 @@
+#info off
+[update]
+name=n2unes
+version=0.3
+required=0
+requires=main.n2,dpr.n2
+author=nihiven
+email=jb@nihiven.net
+desc=n2 mp3 system
+file=n2unes.n2
+info=n2unes
+#info end
+
+#version off
+[0.1]
+n0=initial release
+[0.3]
+n0=version sync
+#version end
+
+
+//"C:\Program Files\foobar2000\foobar2000.exe" /prev
+
+/*
+;;; settings values
+logo: mp3 play msg logo
+play.mode: s = single, r = random
+dir: comma delimited list of directories
+player: winamp or foobar
+random.repeat: number of songs that must play before random chooses a repeat
+random.history: list of crc values for last songs played. holds up to random.repeat value
+startup.index: checks indexed files vs existing files, updates index if needed
+*/
+
+;;; F KEYS BABY
+alias f12 mp3 -r
+
+;;; local aliases
+alias -l _e esi 1 n2unes: $1-
+alias n2unes {
+  if ($prop == version) { return $readini($script,update,version) }
+  if ($prop == dir) { return $_dir }
+  if ($prop == player) { return $_player }
+}
+alias -l _pn push n2unes $1 $2-
+alias -l _pu return $pull(n2unes,$1)
+alias -l _dir return $pull(n2unes,dir)
+alias -l _player return $pull(n2unes,player)
+alias -l _rm return $pull(n2unes,random.repeat)
+alias -l _songs return $hfind(n2unes.index,*,0,w)
+alias -l _wild {
+  var %w = $+(*,$replace($1-,?,*,!,*,.,*,$chr(44),*,',*,-,*,[,*,],*,_,*,$chr(32),*),*) 
+  return $replace(%w,**,*)
+}
+alias -l _set.count {
+  var %f $replace($nopath($1-),$chr(32),?)
+  push n2unes.count %f $calc($_get.count(%f) + 1)
+}
+alias -l _get.count {
+  var %f $replace($nopath($1-),$chr(32),?)
+  var %c $pull(n2unes.count,%f)
+  return $iif(%c == $null,0,%c)
+}
+alias -l _get.song {
+  var %f $pull(n2unes.index,$1)
+
+  if (%f != $null) { return %f }
+
+  var %w $_wild($1-)
+  var %i $hfind(n2unes.index,%w,1,w).data
+
+  return %i 
+}
+
+
+;;; display name for selected audio player
+alias -l _player.name {
+  var %d
+  var %p $nopath($_player)
+
+  if (%p == $null) { %d = None }
+  elseif (%p == winamp.exe) { %d = Winamp }
+  elseif (%p == foobar2000.exe) { %d = Foobar }
+  else { %d = Unsupported }
+
+  return %d
+}
+
+
+alias -l _default {
+  ; check for existing values before reverting to defaults
+  if ($_pu(logo) == $null) {
+    _pn logo <at> : <sl> : <x> [n2unes]
+  }
+
+  if ($_pu(play.mode) == $null) {
+    _pn play.mode r
+  }
+
+  if ($_pu(startup.index) == $null) {
+    _pn startup.index 0
+  }
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;; install ;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias -l _install {
+  ;;; install values: 1 = install, 2 = upgrade, 3 = reset 
+  var %install
+
+  ;;; install messages
+  var %m Installing...,Upgrading...,Resetting...
+  var %v $_pu(version)
+
+  ;;; check for existing installation
+  if (%v == $null) { %install = 1 }
+  elseif (%v < $n2unes().version) { %install = 2 }
+  else { %install = 3 }
+
+  ;;; display action message
+  esb n2unes
+  esi 2 $gettok(%m,%install,44)
+
+  ;;; save version
+  _pn version $n2unes().version
+
+  ;;; set directory
+  n2unes.player
+
+  ;;; set directory
+  _directory
+
+  ;;; set defaults
+  _default
+
+  ;;; index
+  if ($_dir != $null) { .n2unes.index }
+
+  ;;; save it
+  .save.settings n2unes
+
+  ese done
+}
+
+;;; startup
+alias -l _startup {
+  if ($_pu(version) == $null) { _install }
+  else {
+    .load.settings n2unes
+    .load.settings n2unes.index
+    .load.settings n2unes.fav
+  }
+
+  if ($_pu(startup.index)) { n2unes.index.check }
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;; index ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias n2unes.index.check {
+  var %x $gettok($_dir,0,44)
+  var %t 0
+
+  while (%x) {
+    %t = %t + $findfile($gettok($_dir,%x,44),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue,0)
+    dec %x
+  }
+
+  if (%t != $_songs) { n2unes.index }
+}
+
+alias n2unes.index {
+  var %x $gettok($_dir,0,44)
+  var %t 0
+
+  .remove.settings n2unes.index
+
+  if ($show) { esb n2unes index }
+
+  while (%x) {
+    var %d $gettok($_dir,%x,44)
+
+    if (%d == $null) { 
+      _e
+      _e Mp3 directory not set.
+      _e /n2unes dir [dir] 
+      return 
+    }
+
+    esi 2 index %d
+    var %i $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue,0,write $dir(n2unes.index).settings $1-)
+
+    esi 3 %i files
+
+    %t = %t + %i
+    dec %x
+  }
+
+  if (%t != %i) { esi 2 %t files total }
+
+  .hmake n2unes.index 9999
+  .hload -n n2unes.index $dir(n2unes.index).settings
+  .save.settings n2unes.index
+
+  ;; set the value for minimum random repeat, unless it is already set
+  if ($_rm == $null) { 
+    var %rm $round($calc(%i * .1),0)
+    ;  esi 2 Minimum random repeat set to %rm $+ .
+    _pn random.repeat %rm
+  }
+  else { 
+    ; esi 2 Minimum random repeat set to $_rm $+ .
+  }
+
+  if ($show) { ese }
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;player setup ;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias n2unes.player {
+  if ($1 == ?) {
+    _e /n2unes.player [-r]
+    _e Select an audio player for use with n2unes.
+    _e -r: Force player select.
+    eb
+    return
+  }
+
+  ;;; check to see if the player is set
+  if ($_player == $null || $1 == -r) { 
+    var %p $sfile(c:\*.exe,Select Winamp or Foobar executable,Set Player)
+
+    if (%p == $null) { esi 2 No player selected... | return }
+    _pn player $"(%p) 
+
+  }
+
+  esi 2 Player set to $_player.name $+ .
+
+  if ($nopath(%p) !isin winamp.exe,foobar2000.exe) { 
+    esi 3 Only Winamp and Foobar are currently supported.
+    esi 3 You may experience erratic behavior with another player.
+    esi 3 The choice is yours...
+  }
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;; directory setup ;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias n2unes.directory.window dialog -m win.n2unes.directory dlg.n2unes.directory
+on *:dialog:win.n2unes.directory:*:*: {
+  if ($devent == init) { 
+    didtok $dname 1 44 $_pu(dir) 
+    _pn dir.current $_dir
+  }
+
+  if ($devent == sclick) {
+    if ($did == 2) {  
+      var %d $sdir(c:\,Select Music Folder)
+      if (%d != $null) { did -a $dname 1 %d }
+    }
+    if ($did == 4) { 
+      var %d $didtok($dname,1,44)
+      _pn dir %d
+
+      if ($_pu(dir.old) != %d) { .timer -m 1 100 n2unes.index }
+    }
+  }
+
+  if (($devent == dclick) || ($devent == sclick && $did == 3)) {
+    var %d $did($dname,1).seltext
+    var %r $input(Would you like to remove: %d ?,yvq,n2unes)
+
+    if (%r == $yes) { did -d $dname 1 $did($dname,1).sel }
+  }
+}
+dialog -l dlg.n2unes.directory {
+  title "n2unes Music Directories"
+  size -1 -1 315 395
+  list 1, 8 8 300 370, extsel
+  button "Add", 2, 8 365 49 25
+  button "Remove", 3, 58 365 49 25
+  button "OK", 4, 259 365 49 25, ok
+  button "Cancel", 6, 125 365 49 25, cancel, hide
+}
+alias -l _directory {
+  if ($_dir == $null) { 
+    var %d $sdir(c:\,Select Music Folder) 
+    if (%d == $null) { esi 2 No directory selected... | return }
+
+    _pn dir %d
+    esi 2 Directory selected: %d
+  }
+}
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;; main n2unes alias ;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+alias mp3 {
+  if ($1 == ?) {
+    _e 
+    _e /mp3 [-r]
+    ;  _e2 Play an audio file with n2unes.
+    _e -r: Play a random song from your library.
+    return
+  }
+
+  if ($1 == f || $1 == fav) {
+    ea add last played file to favorites
+    n2unes.fav
+    return
+  }
+
+  ; just call n2unes.player?
+  if ($_player == $null) { 
+    _e No player set.
+    _e Use /n2unes.player to set one.
+    eb
+    return
+  }
+
+  if ($1 == -r) { 
+    n2unes.play $n2unes.random
+    return
+  }
+
+  var %i $_get.song($1-)
+  if (%i != $null) { n2unes.play %i }
+  else { esi 1 no match for $1- }
+
+}
+
+
+alias -l n2unes.play {
+  ;;; $1 is the files idx#
+
+  var %f $"($_get.song($1))
+
+  if (!$isfile(%f)) {
+    _e Bad File: %f
+    return
+  }
+
+  ;;; play method based on player
+  if ($_player.name == Winamp) {
+    run $_player %f
+  }
+  elseif ($_player.name == Foobar ) {
+    run $_player /immediate %f
+  }
+  else {
+    run $_player %f
+  }
+
+  ;;; update the file's play count
+  n2unes.count $1 %f
+
+  ;;; play message
+  n2unes.message $1 %f
+
+  ;;; recent list
+  n2unes.recent $1 %f
+}
+
+alias n2unes.count {
+  _set.count $_get.song($1)
+}
+
+alias n2unes.message {
+  _e $nopath($_get.song($1)) : $+($_get.count($_get.song($1)),x)
+  ;msg #nvn $nopath($_get.song($1)) : $+($_get.count($_get.song($1)),x)
+}
+;;; need to fix
+alias n2unes.recent {
+  if ($isid) {
+    if ($1 isnum) { return $shortfn($pull(mp3.recent,$1)) }
+    else { return $pull(mp3.recent,$pullm(mp3.recent,$wild($1-),1).data) }
+  }
+  else { 
+    var %i 10,%m
+    while (%i > 1) {
+      %m = $pull(mp3.recent,$calc(%i - 1))
+      if (%m) { push mp3.recent %i %m }
+      dec %i
+    }
+    push mp3.recent 1 $longfn($1-)
+  }
+}
+
+alias -l n2unes.fav {
+  ; what is the last played song
+}
+
+alias n2unes.random {
+  var %h $_pu(random.history)
+  var %i $_songs
+
+  var %r $rand(1,%i)
+
+  return %r
+}
+
+alias n2unes.list {
+  var %w $_wild($1-)
+  var %i $hfind(n2unes.index,%w,0,w).data
+  %i = $iif(%i > 10,10,%i)
+
+
+  while (%i) {
+    ea $hfind(n2unes.index,%w,%i,w).data
+    dec %i
+  }
+}
+
+;trim history to $1
+alias n2unes.random.repeat {
+  if ($1 == ?) {
+    _e /n2unes.random.repeat <minimum repeat value>
+    _e Sets the minimum number of random songs that must play before n2unes repeats a song.
+    _e The value must be less than or equal to the number of songs in the indexed library.
+    _e There are currently $_songs songs in the library.
+    eb
+    return
+  }
+
+  if ($1 isnum && $1 <= $_songs) { 
+    _pn random.repeat $1 
+    _e Random repeat set to $1 songs.
+  }
+  else {
+    _e Please supply a numeric value less than or equal to $_songs $+ .
+  }
+}
+
+alias n2unes.info {
+  _e Player: $_player.name - $_player
+  _e Index Path: $_dir
+  _e Indexed Songs: $_songs
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; signals ;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+on *:SIGNAL:startup:_startup
+on *:SIGNAL:install:_install
+on *:SIGNAL:default:_default
+alias n2unes.n2.titlebar { return $_songs }
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;; popups ;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+menu Status,Channel {
+  n2unes
+  .$style(2) Control:noop
+  .Play Random [F12]:mp3 -r
+  .Play Recent
+  ..Something here:noop
+  .-
+  .Settings
+  ..$style(2) General:noop
+  ..$iif($_player.name,Change Player $+([,$_player.name,]),Set Player):n2unes.player -r
+  ..Index on Startup $iif($_pu(startup.index),[On],[Off]):_pn startup.index $negate($_pu(startup.index))
+  ..-
+  ..$style(2) Random:noop
+  ..$iif($_rm,Change Min Repeat $+(,[,$_rm,]), Set Min Repeat):n2unes.random.repeat
+  ..Manage Libray:n2unes.directory.window
+  ;  .-
+  ;  .Info:n2unes.info
+  ;  .Mem Dump:spit n2unes
+}

@@ -1,0 +1,24 @@
+dload.1.CALLBACK
+_update.run
+dload.2.CALLBACK
+_q.next _update.upgrade
+dload.3.CALLBACK
+_q.next _update.upgrade
+dload.4.GET
+/update/theme.n2
+dload.3.GET
+/update/main.n2
+dload.2.GET
+/update/theme.n2
+dload.1.GET
+/update/version.txt
+dload.4.CALLBACK
+_q.next _update.upgrade
+dload.3.WRITE
+main.n2
+dload.2.WRITE
+theme.n2
+dload.1.WRITE
+remote_version.txt
+dload.4.WRITE
+theme.n2
