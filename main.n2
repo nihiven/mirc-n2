@@ -341,6 +341,7 @@ alias n2.list {
   esb Available Scripts
   while (%i) {
     var %f = $"($findfile($dir().n2, *.n2, %i))
+    var %l = $+(\,$remove(%f,",$mircdir,$nopath(%f)))
     var %n = $readini(%f, update, name)
     var %d = $readini(%f, update, desc)
     var %r = $readini(%f, update, required)
@@ -348,7 +349,7 @@ alias n2.list {
     var %cb = $iif($script(%f),9,4)
     var %ce = 
 
-    esi 1 $+(,[,%cb,,$str(0,$calc(2 - $len(%t))),%t,%ce,]) $+ : $+(,%n,$chr(32),%v,) : %d
+    esi 1 $+(,[,%cb,,$str(0,$calc(2 - $len(%t))),%t,%ce,]) $+ : $+(,%n,$chr(32),%v,) : %d : %l
 
     dec %i
     inc %t

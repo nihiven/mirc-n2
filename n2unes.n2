@@ -416,9 +416,16 @@ alias -l n2unes.recent {
 }
 ;; menu helper
 alias -l mp3.rm {
-  if ($1 isnum) {
+  if ($1 isnum) { 
     var %f $n2unes.recent($1)
-    if (%f && $1 <= 10) { return $+([,$iif($1 < 10,$+(0,$1),$1),],) $nopath($longfn(%f))) $+ :mp3 -recent $1 }
+    if (%f && $1 <= $iif($2,$2,10)) { 
+      if ($prop == tags) {
+        return $sound(%f).artist - $sound(%f).title $+ :mp3 -recent $1 
+      }
+      else {
+        return $nopath($longfn(%f))) $+ :mp3 -recent $1 
+      }
+    }
   }
 }
 
@@ -516,9 +523,12 @@ alias n2unes.n2.titlebar { return $_songs }
 menu Status,Channel {
   n2unes
   .$style(2) Control:noop
-  .Play Random [F12]:mp3 -r
-  .Play Recent
-  ..$submenu($mp3.rm($1))
+  .Play Random [F12]:f12
+  .Play Next (F5):f5
+  .Play Prev (F4):f4
+  .-
+  .$style(2) Recent:noop
+  ..$submenu($mp3.rm($1,5))
   .-
   .Settings
   ..$style(2) General:noop
