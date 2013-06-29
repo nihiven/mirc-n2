@@ -26,6 +26,12 @@ dont think minimum repeat is working
 
 */
 
+/*
+itunes info
+comopen m itunes.application
+google itunes com commands
+
+*/
 
 /*
 ;;; settings values
@@ -333,9 +339,7 @@ alias mp3 {
 
   ; just call n2unes.player?
   if ($_player == $null) { 
-    _e No player set.
-    _e Use /n2unes.player to set one.
-    eb
+    n2unes.error no.player
     return
   }
 
@@ -488,8 +492,17 @@ alias -l n2unes.hotkeys {
   if ($_player.name == Foobar) {
     %cmd = /next,/prev,/playpause,/config,/exit
   }
-  if ($_player.name == Winamp) {
+  elseif ($_player.name == Winamp) {
     _e Winamp not suppported yet.
+    return
+  }
+  elseif ($_player.name == None) {
+    n2unes.error no.player
+    return
+  }
+  else {
+    n2unes.error unknown.player
+    return
   }
 
   ;; validate switch
@@ -508,6 +521,20 @@ alias n2unes.info {
   _e Indexed Songs: $_songs
 }
 
+alias -l n2unes.error {
+  if ($1 == no.player) { 
+    _e No player set.
+    _e Use /n2unes.player to set one.
+  }
+  elseif ($1 == unknown.player) {
+    _e Unknown player set.
+    _e Hotkeys not available.
+  }
+  else {
+    _e Unknown error: $1
+  }
+  eb
+}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; signals ;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

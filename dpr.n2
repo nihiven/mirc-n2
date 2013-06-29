@@ -136,7 +136,7 @@ alias save.all {
   var %i $hget(0)
   while (%i) {
     if (n2* iswm $hget(%i)) {
-      _l DPR[save.all]: $hget(%i) $dir($hget(%i)).settings 
+      _l DPR[save.all]: $hget(%i) $dir($+($hget(%i),.n2s)).settings 
       hsave -o $hget(%i) $dir($+($hget(%i),.n2s)).settings
     }
     dec %i
