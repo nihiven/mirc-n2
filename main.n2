@@ -74,7 +74,7 @@ alias negate {
 alias nvn {
   if ($prop == version) { return 0.3 }
   if ($prop == tag) { 
-    var %e n2(<v>):,screamstyle<v>, bendinglight ,nihiven(<v>),nihiven $+ <v>,screamstyle<v>
+    var %e n2(<v>):,starscream<v>, bendinglight ,nihiven(<v>),nihiven $+ <v>,screamstyle<v>
     return $replace($gettok(%e,$rand(1,$gettok(%e,0,44)),44),<v>,0.1)
   }
   if ($prop == quote) {

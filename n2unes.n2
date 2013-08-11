@@ -48,6 +48,7 @@ startup.index: checks indexed files vs existing files, updates index if needed
 alias f1 n2unes.hotkeys -s
 alias f4 n2unes.hotkeys -p
 alias f5 n2unes.hotkeys -n
+alias f8 n2unes.fav
 alias f12 n2unes.hotkeys -r
 
 
@@ -87,7 +88,9 @@ alias _get.song {
 
   return %i 
 }
-
+;;; favorites
+alias -l _pnf push n2unes.fav $1 $2-
+alias -l _puf return $pull(n2unes.fav,$1)
 
 ;;; display name for selected audio player
 alias -l _player.name {
@@ -115,6 +118,10 @@ alias -l _default {
 
   if ($_pu(startup.index) == $null) {
     _pn startup.index 0
+  }
+
+  if ($_rm == $null) { 
+    _pn random.repeat 10
   }
 }
 
@@ -206,7 +213,7 @@ alias n2unes.index {
     }
 
     esi 2 index %d
-    var %i $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue,0,write $dir(n2unes.index).settings $1-)
+    var %i $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue,0,write $dir(n2unes.index.n2s).settings $1-)
 
     esi 3 %i files
 
@@ -217,7 +224,7 @@ alias n2unes.index {
   if (%t != %i) { esi 2 %t files total }
 
   .hmake n2unes.index 9999
-  .hload -n n2unes.index $dir(n2unes.index).settings
+  .hload -n n2unes.index $dir(n2unes.index.n2s).settings
   .save.settings n2unes.index
 
   ;; set the value for minimum random repeat, unless it is already set
@@ -351,7 +358,7 @@ alias mp3 {
   if (%song.id == $null) {  %song.id = $_get.song($1-) } 
 
   if (%song.id != $null) { n2unes.play %song.id }
-  else { esi 1 no match for $1- }
+  else { _e no match for $1- }
 
 }
 
@@ -435,6 +442,12 @@ alias -l mp3.rm {
 
 alias -l n2unes.fav {
   ; what is the last played song
+  var %f $n2unes.recent(1)
+  var %m $hget(n2unes.fav,0).item
+  if (%m ==  $null) { %m = 0 }
+  inc %m
+  _pnf %m %f
+  _e Favorited: $nopath(%f)
 }
 
 alias n2unes.random {
@@ -472,6 +485,10 @@ alias n2unes.random.repeat {
   if ($1 isnum && $1 <= $_songs) { 
     _pn random.repeat $1 
     _e Random repeat set to $1 songs.
+  }
+  elseif ($_rm == $null) {
+    _pn random.repeat 10
+    _e Random repeat set to 10 songs.
   }
   else {
     _e Please supply a numeric value less than or equal to $_songs $+ .
