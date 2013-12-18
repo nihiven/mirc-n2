@@ -187,7 +187,7 @@ alias n2unes.index.check {
   var %t 0
 
   while (%x) {
-    %t = %t + $findfile($gettok($_dir,%x,44),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue,0)
+    %t = %t + $findfile($gettok($_dir,%x,44),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue;*.wv,0)
     dec %x
   }
 
@@ -213,7 +213,7 @@ alias n2unes.index {
     }
 
     esi 2 index %d
-    var %i $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue,0,write $dir(n2unes.index.n2s).settings $1-)
+    var %i $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue;*.wv,0,write $dir(n2unes.index.n2s).settings $1-)
 
     esi 3 %i files
 
