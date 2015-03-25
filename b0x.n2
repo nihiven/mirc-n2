@@ -70,4 +70,4 @@ alias event.scan {
 
 
 alias temp run C:\Users\nihiven\AppData\Roaming\mIRC\n2\temp\
-alias b0x.n2.titlebar return Be well on $scon(1).$network
+;alias b0x.n2.titlebar return Be well on $scon(1).$network

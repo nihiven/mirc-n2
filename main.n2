@@ -94,7 +94,46 @@ alias trailing.slash {
   return $iif($right($1-,1) = \,$1-,$+($1-,\))
 }
 
+alias c.status {
+  ; now it checks if it has a property and the property is a proper one.
+  ; then it returns the correct answer ;)
 
+  if (($prop) && ($istok(op.vo.reg,$prop,46))) { return $iif($1 is [ $+ [ $prop ] ] $2,$true,$false) }
+
+  ; otherwise it return the current status of the user in $2 (specified channel)
+
+  else {
+    if (($1 isop $2) && ($1 isvo $2)) || (($1 isop $2) && ($1 !isvo $2)) { return @ $+ $1 }
+    elseif (($1 !isop $2) && ($1 isvo $2)) { return + $+ $1 }
+    else { return $1 }
+  }
+}
+alias c.nick {
+  var %row $cnick($1)
+  var %color $calc($pu(c.nick.color) + 1)
+  var %colors $pu(c.nick.colors)
+  var %cnt $gettok(%colors,0,44)
+  var %color.pick $calc(%color % %cnt)
+
+  ;  es /c.nick $1-
+  ;  es row= %row
+  ;  es color= %color
+  ;  es colors= %colors
+  ;  es color.pick= %color.pick
+
+  if (%row == 0) {
+    .cnick $1 $gettok(%colors,%color.pick,44)
+    ;  echo -s     .cnick $1 $gettok(%colors,%color.pick,44)
+    .pn c.nick.color %color
+
+    if ($cnick(0) > %cnt) {
+      .cnick -r 1
+    }
+  }
+  else {
+    .cnick $1 $cnick(%row).color
+  }
+}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; script aliases;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -197,11 +236,14 @@ alias default.colors {
   writeini %m colors $+(n,%schemes) nvn dark,2,15,4,12,15,15,15,15,15,15,15,0,15,15,15,0,15,15,15,15,11,1,0,1,0,14,0,2,2,0
   writeini %m palettes $+(n,%schemes) 16777215,0,4403239,37632,255,127,10223772,32764,65535,64512,9671424,13217927,12615680,16711935,8355711,13816530
 
+  ; nick coloring
+  pn c.nick.colors 8,11,14,9,12,15,10,13
+
   ; load it up
   color -l
   color -s nvn dark
 }
-alias default.font font -z 10 Verdana
+alias default.font font -z 10 "Lucidia Console"
 alias install {
   esb Installing n2
 
@@ -504,6 +546,13 @@ alias es echo -s $+(,$color(notice),$pre,) $1-
 alias esb eb | esi 1 $+(,$1-,)
 alias ese esi 1 $+(,$1-,)
 
+; events
+alias ej echo $1 $+(,$color(info),$timestamp,,$color(normal)) $+(,$color(highlight),--->,,$color(join)) $2 $+(,$color(info),[,$3,])
+alias ep echo $1 $+(,$color(info),$timestamp,,$color(normal)) $+(,$color(highlight),<---,,$color(part)) $2
+alias eq echo $1 $+(,$color(info),$timestamp,,$color(normal)) $+(,$color(highlight),<<<<,,$color(quit)) $2 $+(,$color(info),[,$4-,])
+alias ec echo $1 $+(,$color(info),$timestamp,,$color(normal)) $+(,$color(highlight),<,$3,$2,,$color(highlight),>,$color(normal),) $4-
+alias ech echo $1 $+(,$color(info),$timestamp,,$color(normal)) $+(,$color(highlight),<,$3,$2,,$color(highlight),>,$highlight($4-).color,) $4-
+alias eaa echo $1 $+(,$color(info),$timestamp,,$color(normal)) $+(,$color(action),:::,$2,,$color(action),,$color(action),) $3-
 
 ; highlight
 alias eh echo -a $+(,$color(highlight),$pre,) $1-
@@ -527,8 +576,28 @@ alias prei return $+(|,$str( ,$1),)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;; event ;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-on *:notice:*:*:ea $1- | halt
+on ^*:notice:*:*:ea $1- | halt
+on ^*:join:#:ej $chan $nick $address | halt
+on ^*:part:#:ep $chan $nick $address | halt
+on ^*:quit: {
+  var %i $comchan($nick,0)
+  while (%i) {
+    eq $comchan($nick,%i) $nick $address $1-
+    dec %i
+  }
+  halt
+}
+; wrap(text,$window($chan).font,$window($chan).fontsize,$window($chan).w,0)
+on ^*:text:*:#: {
+  var %cnick $+($nick,.,$chan)
+  c.nick %cnick
 
+  if ($highlight($1-)) { ech $chan $c.status($nick,$chan) $cnick(%cnick).color $1- }
+  else { ec $chan $c.status($nick,$chan) $cnick(%cnick).color $1- }
+
+  halt
+}
+on ^*:action:*:eaa $chan $nick $1- | halt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;; raw ;;;;;;;;;;;;;;;;;;;;;;;
@@ -544,14 +613,17 @@ raw 319:*: {
   esi 2 $3-
   halt
 }
+raw 330:*:esi 2 Registered as: $3 | halt
 raw 338:*:esi 2 $3 | halt
 raw 312:*:halt
-raw 317:*:esi 1 Idle $sdur($3) | halt
-raw 301:*:esi 1 $3- | halt
+raw 317:*:esi 2 Idle $sdur($3) | halt
+raw 301:*:esi 2 $3- | halt
 raw 318:*:halt
+raw 378:*:halt | ;esi 2 Connecting from: $6 $+(,[,$7,])
+raw 671:*:esi 2 Using secure connection. | halt
 
 ;;; channel
-raw 353:*:esi 1 $+(,$3,,:) $4- | halt
+raw 353:*:halt
 raw 366:*:halt
 raw 324:*:halt
 raw 329:*:halt
@@ -575,5 +647,5 @@ raw 375:*:halt
 raw 376:*:halt
 
 ;;; misc
-raw 401:*:esi 1 No such nick: $2 | halt
+raw 401:*:echo -a $+(,$color(info),$timestamp) $+(,$color(info2),:::,$color(normal)) $+(,$2,:) Unknown nick | halt
 raw 470:*:esi 1 Forwarded from $+(,$2,) to $+(,$3,) | halt

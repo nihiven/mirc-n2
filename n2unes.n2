@@ -53,7 +53,7 @@ alias f12 n2unes.hotkeys -r
 
 
 ;;; local aliases
-alias -l _e esi 1 n2unes: $1-
+alias -l _e echo -a $+(,$color(info),$timestamp) $+(,$color(info2),::[,$color(normal)) $1-
 alias n2unes {
   if ($prop == version) { return $readini($script,update,version) }
   if ($prop == dir) { return $_dir }
@@ -558,7 +558,7 @@ alias -l n2unes.error {
 on *:SIGNAL:startup:_startup
 on *:SIGNAL:install:_install
 on *:SIGNAL:default:_default
-alias n2unes.n2.titlebar { return $_songs }
+;alias n2unes.n2.titlebar { return $_songs }
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

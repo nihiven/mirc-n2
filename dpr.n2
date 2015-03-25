@@ -144,21 +144,21 @@ alias save.all {
   if ($show) { em All settings saved. }
 }
 
---- first dpr update in years....
--- arrays
+; arrays
 alias _ {
-  ea /_ $1-
+  ;  ea /_ $1-
 
   if ($1 == $null) { ea duh | return }
 
-  if ($prop = $null) { 
+  if ($prop == $null) { 
     if ($2 isnum) { 
       var %x $+(arr.,$1)
-      ea %x
+      ;      ea %x
 
       if ($3 == $null) {
+        ea ret: $2 %x
         if ($2 == 0) { return $hget(%x,0) }
-        else { return $hget(%x,$2).data }
+        else { return $hget(%x,$2) }
       }
       else {
         hadd -m %x $2 $3
@@ -169,6 +169,6 @@ alias _ {
 alias arr {
 
   $_(a,4,this is a test)
-  ea $_(a,0)
-  ea $_(a,4)
+  ;  ea i:0 $_(a,0)
+  ea i:4 $_(a,4)
 }
