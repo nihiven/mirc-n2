@@ -25,6 +25,7 @@ alias pn push n2 $1-
 alias pns push.nosave n2 $1-
 alias pu return $pull(n2,$1-)
 alias dn hdel n2 $1-
+alias dnw tripw n2 $1-
 
 alias push {
   chk.settings $1
@@ -144,7 +145,7 @@ alias save.all {
   if ($show) { em All settings saved. }
 }
 
-; arrays
+; TODO: finish arrays
 alias _ {
   ;  ea /_ $1-
 

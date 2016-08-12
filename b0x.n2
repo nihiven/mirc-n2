@@ -52,7 +52,6 @@ alias nlg { msg $active not | .timer 1 1 msg $active lookin | .timer 1 2 msg $ac
 
 ;;;;;;;;;;;; some events
 
-
 ;;; event scanning
 alias event.scan {
   var %i $script(0)
@@ -60,14 +59,32 @@ alias event.scan {
   esb Event Scan
   while (%i) {
     var %f $nopath($script(%i))
-
+    ; TODO: something is fucky here
     esi 1 %f $+ : $+(,$iif($isalias($+(%f,.default)),9,4),default) $+(,$iif($isalias($+(%f,.install)),9,4),install) $+(,$iif($isalias($+(%f,.startup)),9,4),startup) $+(,$iif($isalias($+(%f,.shutdown)),9,4),shutdown) $+(,$iif($isalias($+(%f,.load)),9,4),load) $+(,$iif($isalias($+(%f,.tick)),9,4),tick) $+(,$iif($isalias($+(%f,.tick5)),9,4),tick5) $+(,$iif($isalias($+(%f,.tick30)),9,4),tick30) $+(,$iif($isalias($+(%f,.update.pre)),9,4),update.pre) $+(,$iif($isalias($+(%f,.update.post)),9,4),update.post) 
-
     dec %i
   }
   ese Done
 }
 
+alias todo {
+  var %scripts $script(0)
+
+  esi 1 Todo scan
+  write -c todo.txt
+  while (%scripts) {
+    var %f $script(%scripts)
+    var %lines $lines(%f)
+    while (%lines) {
+      if (TODO: isin $read(%f,n,%lines)) {
+        write todo.txt $+([,$nopath(%f),:,%lines,]) $read(%f,n,%lines)
+        esi 2 $+([,$nopath(%f), : ,%lines,]) $remove($read(%f,n,%lines),;)
+      }
+      dec %lines
+    }
+    dec %scripts
+  }
+  esi 1
+}
 
 alias temp run C:\Users\nihiven\AppData\Roaming\mIRC\n2\temp\
 ;alias b0x.n2.titlebar return Be well on $scon(1).$network

@@ -17,6 +17,8 @@ n0=initial release
 n0=added signals
 #version end
 
+; TODO: standardize use of /ese for displaying errors
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; script identifiers ;;;;;;;;;;;;;;;;;;
@@ -81,6 +83,9 @@ alias nvn {
     var %q You're only screwed if it stops responding.,Giving you options.,Reasonable and sensible.,The gentle hum of anxiety.
     return $gettok(%q,$rand(1,$gettok(%q,0,44)),44)
   }
+  if ($prop == logo) {
+    return $+(,$color(notice),$pu(logo),)
+  }
 }
 alias percent return $round($calc(100 * $calc($1 / $2)),2)
 alias res {
@@ -89,7 +94,9 @@ alias res {
   elseif ($prop == msg) { return $gettok($1,2-,32) }
   else { return %res }
 }
-alias sdur return $remove($replace($duration($1-),wks,w,wk,w,days,d,day,d,hrs,h,hr,h,mins,m,min,m,secs,s,sec,s),$chr(32))
+alias dur return $replace($duration($1-),wks,w,wk,w,days,d,day,d,hrs,h,hr,h,mins,m,min,m,secs,s,sec,s)
+alias sdur return $remove($dur($1-),$chr(32))
+
 alias trailing.slash {
   return $iif($right($1-,1) = \,$1-,$+($1-,\))
 }
@@ -153,10 +160,11 @@ alias dll.check {
 alias environment.info {
   esb Environment Info
   esi 1 Windows $os 
-  esi 1 mIRC $version $bits $+ bit
+  esi 1 mIRC $+(v,$version) $bits $+ bit
   esi 1 mIRC Dir: $mircdir
-  esi 1 Script Dir: $scriptdir
-  ese Done
+  esi 1 n2 $+(v,$nvn().version)
+  esi 1 n2 Dir: $scriptdir
+  ese
 }
 alias file.to.var {
   var %res
@@ -415,8 +423,6 @@ alias startup {
     default 
   }
 
-
-
   es $nvn().tag
   es $nvn().quote
 
@@ -478,7 +484,7 @@ on *:start:startup
 
 ;;;;;;;;;;;;;;;;; signal events ;;;;;;;;;;;;;;;
 on *:SIGNAL:tick: {
-  n2.titlebar $iif($scon($cid).status == connected,$+(idle[,$sdur($idle),]),Disconnected)
+  n2.titlebar $iif($scon($cid).status == connected,$+(idle[,$dur($idle),]),Disconnected)
 }
 
 
@@ -572,6 +578,127 @@ alias logol return $+(,$color(notice),$replace($pu(logol),<l>,$1),)
 alias pre return |
 alias prei return $+(|,$str( ,$1),)
 
+;;;;; progress bar ;;;;;
+;; TODO: check to see if window exists
+;; TODO: use $height $width to make text/bar boundaries dynamic
+
+; create window
+alias progress {
+  var %win $+(@,$1,:)
+  window -kp +bt %win -1 -1 400 100 $dir(music.ico).graphics
+  titlebar %win $2-
+  progress.mode $1 percent
+  progress.color $1 0 3 9
+}
+
+; sets the titlebar text
+alias progress.titlebar {
+  var %win $+(@,$1,:)
+  titlebar %win $2-
+}
+
+; sets progress bar mode to percent or count
+alias progress.mode {
+  var %win $+(@,$1,:)
+  var %sv $+(progress.,$1,.mode)
+  if ($2 == percent) {
+    pns %sv percent  
+  }
+  elseif ($2 == count) {
+    pns %sv count
+  }
+  else {
+    ese /progress.mode invalid mode given:4 $2
+    ese Valid Modes:9 percent count
+  }
+}
+
+; sets colors for the progress bar elements
+; $2 = text, $3 = bar outline, $3 = bar fill
+alias progress.color {
+  pns $+(progress.,$1,.color.text) $2
+  pns $+(progress.,$1,.color.outline) $3
+  pns $+(progress.,$1,.color.fill) $4
+}
+
+; sets the text above the progress bar
+alias progress.text {
+  pns $+(progress.,$1,.text) $2-
+}
+
+; set the progress to $2 percent
+alias progress.percent {
+  pns $+(progress.,$1,.percent) $2-
+}
+
+; set the count, $2 = max, $3 = current
+alias progress.count {
+  pns $+(progress.,$1,.max) $2
+  pns $+(progress.,$1,.current) $3
+}
+
+; redraw progress window
+; all window updates are deferred until refresh is called
+alias progress.refresh {
+  var %win $+(@,$1,:)
+  ; data
+  var %text $pu($+(progress.,$1,.text))
+  var %max $pu($+(progress.,$1,.max))
+  var %cur $pu($+(progress.,$1,.current))
+  var %perc $pu($+(progress.,$1,.percent)) $+ %
+  var %perc.value $calc($pu($+(progress.,$1,.percent)) / 100)
+
+  ; colors
+  var %c.text $pu($+(progress.,$1,.color.text))
+  var %c.outline $pu($+(progress.,$1,.color.outline))
+  var %c.fill $pu($+(progress.,$1,.color.fill))
+
+  ; coords
+  var %bar.w $calc($window(%win).w - 18)
+  var %bar.h 37
+  var %perc.w $width(%perc,Verdana,12,1)
+  var %perc.h $height(%perc,Verdana,12)
+
+
+  var %bar.x 5
+  var %bar.y 25
+  var %perc.x $calc($calc($window(%win).w / 2) - $calc(%perc.w / 2))
+  var %perc.y $calc(%bar.y + $calc(%bar.h / 2) - $calc(%perc.h / 2))
+
+
+  ; debug
+  ; ea %win %text %cur / %max %perc
+
+  ; draw elements
+
+
+  clear -n %win
+  drawtext -np %win %c.text Verdana 12 5 5 $+(,%text)
+  drawrect -dfn %win %c.outline 1 %bar.x %bar.y %bar.w %bar.h 10 10
+  drawrect -dfn %win %c.fill 1 %bar.x %bar.y $calc(%perc.value * %bar.w) %bar.h 10 10
+  drawtext -np %win %c.text Verdana 12 %perc.x %perc.y $+(,%perc)
+
+  ; draw window
+  drawtext %win
+}
+
+; close progress and unset related variables
+alias progress.close {
+  var %win $+(@,$1,:)
+
+  window -c %win
+  dnw $+(progress.,$1,.*)
+}
+
+; let's test it out...
+alias progress.test {
+  var %n $1
+  progress %n Indexing...
+  progress.text %n c:\jb\files\
+  progress.percent %n 10
+  progress.count %n 2452 32
+  progress.refresh %n
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;; event ;;;;;;;;;;;;;;;;;;;;;;;
@@ -616,7 +743,7 @@ raw 319:*: {
 raw 330:*:esi 2 Registered as: $3 | halt
 raw 338:*:esi 2 $3 | halt
 raw 312:*:halt
-raw 317:*:esi 2 Idle $sdur($3) | halt
+raw 317:*:esi 2 Idle $dur($3) | halt
 raw 301:*:esi 2 $3- | halt
 raw 318:*:halt
 raw 378:*:halt | ;esi 2 Connecting from: $6 $+(,[,$7,])

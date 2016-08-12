@@ -9,6 +9,7 @@ email=jb@nihiven.net
 desc=n2 mp3 system
 file=n2unes.n2
 info=n2unes
+broughttoyou=M83 - Time Wind
 #info end
 
 #version off
@@ -19,18 +20,10 @@ n0=version sync
 #version end
 
 /*
-fix this stuff
-stop indexing when no changes are made to the library
-remove existing instances of file from previous list when adding an instance
-dont think minimum repeat is working
-
-*/
-
-/*
-itunes info
-comopen m itunes.application
-google itunes com commands
-
+TODO: stop indexing when no changes are made to the library
+TODO: remove existing instances of file from previous list when adding an instance
+TODO: i dont think minimum repeat is working
+TODO: indexing locks up mirc
 */
 
 /*
@@ -104,7 +97,6 @@ alias -l _player.name {
 
   return %d
 }
-
 
 alias -l _default {
   ; check for existing values before reverting to defaults
@@ -187,7 +179,7 @@ alias n2unes.index.check {
   var %t 0
 
   while (%x) {
-    %t = %t + $findfile($gettok($_dir,%x,44),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue;*.wv,0)
+    %t = %t + $findfile($gettok($_dir,%x,44),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue;*.wav,0)
     dec %x
   }
 
@@ -196,48 +188,60 @@ alias n2unes.index.check {
 
 alias n2unes.index {
   var %x $gettok($_dir,0,44)
-  var %t 0
+  %n2unes.index.tot = 1
 
   .remove.settings n2unes.index
 
-  if ($show) { esb n2unes index }
+  if (%x <= 0) {
+    ; TODO: make sure this works, might not...
+    _e No directories to index.
+    return
+  }
+
+  if ($show) { esb indexing music files }
+
+  .hmake n2unes.index 9999
+  ; open progress bar
+  progress n2unes Indexing music files...
+
 
   while (%x) {
     var %d $gettok($_dir,%x,44)
 
     if (%d == $null) { 
       _e
-      _e Mp3 directory not set.
+      _e Music directory not set.
       _e /n2unes dir [dir] 
       return 
     }
 
-    esi 2 index %d
-    var %i $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue;*.wv,0,write $dir(n2unes.index.n2s).settings $1-)
-
-    esi 3 %i files
-
-    %t = %t + %i
+    progress.text n2unes %d
+    progress.percent n2unes 0
+    var %z $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue;*.wv,0)
+    var %i $findfile($"($trailing.slash(%d)),*.mp3;*.mpc;*.ogg;*.m4a;*.aac;*.m3u;*.fpl;*.flac;*.cue;*.wv,0,n2unes.index.progress %z $findfilen $1-)
     dec %x
+
   }
+  if ($show) { esi 2 %n2unes.index.tot files indexed }
 
-  if (%t != %i) { esi 2 %t files total }
-
-  .hmake n2unes.index 9999
-  .hload -n n2unes.index $dir(n2unes.index.n2s).settings
   .save.settings n2unes.index
+  progress.close n2unes
+  unset %n2unes.index.tot
 
-  ;; set the value for minimum random repeat, unless it is already set
+  ; set the value for minimum random repeat, unless it is already set
   if ($_rm == $null) { 
     var %rm $round($calc(%i * .1),0)
-    ;  esi 2 Minimum random repeat set to %rm $+ .
     _pn random.repeat %rm
   }
-  else { 
-    ; esi 2 Minimum random repeat set to $_rm $+ .
-  }
+}
 
-  if ($show) { ese }
+alias -l n2unes.index.progress {
+  var %max $1, %cur $2
+  progress.percent n2unes $round($calc($calc(%cur / %max) * 100),0)
+  progress.refresh n2unes
+
+  push.nosave n2unes.index %n2unes.index.tot $3-
+  inc %n2unes.index.tot
 }
 
 
@@ -337,7 +341,7 @@ alias mp3 {
     return
   }
 
-  ;; wtf is this
+  ;; TODO: wtf is this
   if ($1 == f || $1 == fav) {
     ea add last played file to favorites
     n2unes.fav
@@ -568,8 +572,8 @@ menu Status,Channel {
   n2unes
   .$style(2) Control:noop
   .Play Random [F12]:f12
-  .Play Next (F5):f5
-  .Play Prev (F4):f4
+  .Play Next [F5]:f5
+  .Play Prev [F4]:f4
   .-
   .$style(2) Recent:noop
   ..$submenu($mp3.rm($1,5))
@@ -581,7 +585,7 @@ menu Status,Channel {
   ..-
   ..$style(2) Random:noop
   ..$iif($_rm,Change Min Repeat $+(,[,$_rm,]), Set Min Repeat):n2unes.random.repeat
-  ..Manage Libray:n2unes.directory.window
+  ..Manage Music Directories:n2unes.directory.window
   ;  .-
   ;  .Info:n2unes.info
   ;  .Mem Dump:spit n2unes
