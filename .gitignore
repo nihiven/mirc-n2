@@ -169,3 +169,19 @@ sasl.mrc
 SASL.hsh
 7.mrc
 crypto.n2
+/logs
+/channels
+*.pem
+*.chm
+*.hsh
+servers.ini
+urls.ini
+versions.txt
+*.exe
+*.chw
+/defaults
+/scripts/old
+mirc - Copy.ini
+debug.log
+channels.ini
+readme.txt

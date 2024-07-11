@@ -1,0 +1,50 @@
+/*
+$zip
+$isalias
+*/
+
+╟ ╼ ╴╔ ═
+
+alias addon {
+  var %fileCount = $script(0)
+  @ scanning %fileCount possible addons...
+  while (%fileCount) {
+    var %file = $script(%fileCount)
+    var %topics = $ini(%file, 0)
+    if (%topics == 0) { dec %fileCount | continue }
+    @ $+(,$nopath(%file))
+    while (%topics) {
+      var %topic = $ini(%file,%topics)
+      var %items = $ini(%file,%topics,0)
+      @ $+([,$ini(%file,%topics),])
+      while (%items) {
+        var %item = $ini(%file,%topic,%items)
+        @ $+(%item,=,$readini(%file,%topic,%item))
+        dec %items
+      }
+      dec %topics
+    }
+    dec %fileCount
+  }
+}
+
+alias -l isaddon {
+  var %name = $readini($1-,nvn.addon,name)
+  @ %name
+}
+
+alias -l _p return $readini($1, nvn.addon, $2)
+alias -l _e {
+  if ($isalias(@)) {
+    @ $1-
+  } 
+  else {
+    echo 8 -a $1-
+  }
+}
+
+;; use $script, $ini, $readini to discover nihiven addons!
+[nvn.addon]
+name=addonis
+author=nihiven
+version=0.1.0

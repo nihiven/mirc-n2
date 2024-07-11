@@ -1,0 +1,172 @@
+#addonis on
+/*
+$zip
+$isalias
+
+1. list files that have addonis fields
+2. give ability to install/uninstall addonis compatible files
+3. give ability to enable/disable addonis compatible files
+*/
+;; shortcut ini reads for addons
+alias -l _i return $readini($2-,nvn.addon,$1)
+alias -l _name return $_i(name,$1-)
+alias -l _author return $_i(author,$1-)
+alias -l _version return $_i(version,$1-)
+alias -l _remote return $_i(remote,$1-)
+alias -l _description return $_i(description,$1-)
+alias -l _id return $_i(id,$1-)
+
+; no params
+alias addon.list {
+  var %fileCount = $script(0)
+  _e scanning %fileCount possible addons...
+  while (%fileCount) {
+    var %file = $script(%fileCount)
+    var %topics = $ini(%file, 0)
+    if (%topics == 0) { dec %fileCount | continue }
+    _e $+(,$nopath(%file))
+    while (%topics) {
+      var %topic = $ini(%file,%topics)
+      var %items = $ini(%file,%topics,0)
+      _e $+([,$ini(%file,%topics),])
+      while (%items) {
+        var %item = $ini(%file,%topic,%items)
+        _e $+(%item,=,$readini(%file,%topic,%item))
+        dec %items
+      }
+      dec %topics
+    }
+    dec %fileCount
+  }
+}
+
+alias addon.inspect {
+  var %fileCount = $script(0)
+  _e scanning %fileCount files for groups...
+  while (%fileCount) {
+    var %file = $script(%fileCount)
+    var %groups = $group(0)
+    var %i = %groups
+    while (%i) {
+      if (%file == $group(%i).fname) {
+        _e $group(%i).name
+      }
+      dec %i
+    }
+    dec %fileCount
+  }
+}
+
+;; expanded $group, second param can be a filename
+alias _group {
+  var %groups, %inNum = $1, %inFile = $2-, %groupCount = $group(0)
+  while (%groupCount) {
+    if ($group(%groupCount).fname == %inFile) { %groups = $addtok(%groups,$group(%groupCount),44) }
+    dec %groupCount
+  }
+  if (%inNum == 0) { 
+    var %result = $gettok(%groups,0,44)
+    return $iif(%result,%result,0)
+  }
+  if (%inNum isnum) { return $gettok(%groups,%inNum,44) }
+}
+
+alias isaddon {
+  return $_name($1-)
+}
+
+alias -l _p return $readini($1-, nvn.addon, $2)
+alias -l _e {
+  if ($isalias(@)) {
+    @ $1-
+  }
+  else {
+    echo 8 -a $1-
+  }
+}
+
+alias addon.versions.url return https://nvn.io/n3/versions
+alias addon.versions.file return $+($getdir,versions)
+alias addon.index.refresh {
+  var %indexData = $urlget($addon.index.url, gfb, n3.dwn, addon.index.complete, &headers, &body)
+}
+alias addon.index.complete {
+  if ($1) { 
+    if (!$isfile($addon.versions.file)) { ^ versions file missing | return $false }
+    _verify.versions.file
+  }
+}
+
+alias _gidx {
+  if ($1 isnum) { 
+    if ($urlget($1).state == fail) { ^ Could not get n3 version file. | halt }
+    addon.index.complete $1-
+  }
+  else {
+    write -c $addon.versions.file
+    return $urlget($addon.versions.url,gf,$addon.versions.file,_gidx)
+  }
+}
+
+alias _verify.versions.file {
+  var %shaRead, %shaCalc, %tempFile = $tempfn($getdir)
+
+  ; copy versions file to temp file
+  if (!$isfile($addon.versions.file)) { ^ versions file missing | return $false }
+  .copy -of $addon.versions.file %tempFile
+
+  ; read and save crc from [index]
+  %shaRead = $readini(%tempFile,index,crc)
+
+  ; remove crc from [index]
+  .remini %tempFile index crc
+
+  ; save sha256 of temp file
+  %shaCalc = $sha256(%tempFile,2)
+  .remove %tempFile
+
+  ; check for versions file and remove
+  .remove $addon.versions.file
+
+  ; compare saved crc to $sha256(temp file)
+  if (%shaRead == %shaCalc) { .signal process.versions | return $true }
+
+  ^ versions CRC check failed
+  return $false
+}
+
+#addonis end
+
+#addonis.menu on
+menu * {
+  -
+  Addon Manager
+  .List Addons: addon
+  .-
+  .Load Scripts:load.scripts
+  .Reload Scripts:reload.scripts
+  .-
+  .Addon Test
+  ..$submenu($addon.menu($1)):pretty girls
+}
+alias -l addon.menu {
+  if ($1 == begin) return -
+  if ($1 < 5) { return $iif($server == $null,$style(2)) JB:_e JB }
+  if ($1 == end) return -
+}
+#addonis.menu end
+
+#addonis off
+;; use $script, $ini, $readini to discover nihiven addons!
+[nvn.addon]
+id=addonis
+name=addonis
+description=Addon Manager
+author=nihiven
+version=0.1.0
+remote=https://nvn.io/n3/addonis.nvn
+core=$true
+
+[nvn.addon.requirements]
+nihiven=0.1.0
+#addonis end

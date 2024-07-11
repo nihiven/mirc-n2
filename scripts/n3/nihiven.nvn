@@ -1,0 +1,212 @@
+/*
+TODO: addons
+TODO: initial config
+https://rentry.co/qou82
+*/
+
+/*
+Configuration Variables and Related Aliases
+*/
+alias _sn3 _s n3 $+($1,.,$2) $3-
+alias _gn3 return $_g(n3,$1-)
+alias _menu return $_gn3($1,$+($2,.menu))
+alias _text return $_gn3($1,$+($2,.text))
+alias _group return $_gn3($1,$+($2,.group))
+alias _m return
+alias _mc return $iif($_gn3($1,$2),$style(1)) 
+
+alias n3.load.config.vars {
+  :v0.1.0
+  _sn3 debug enabled $false
+  _sn3 debug enabled.menu Debug
+  _sn3 debug enabled.text Adds more info to script messages. 
+
+  _sn3 whois enabled $true
+  _sn3 whois enabled.menu whois
+  _sn3 whois enabled.text Replace mIRC whois with n3 whois.
+  _sn3 whois enabled.group #n3.whois
+
+  _sn3 whois extra.enabled $true
+  _sn3 whois extra.enabled.menu Extra
+  _sn3 whois extra.enabled.text Adds more info to whois results.
+
+  :v1.0.0
+}
+
+alias _version {
+  var %major = 0, %minor = 1, %patch = 0
+
+  if ($prop == major) { return %major }
+  if ($prop == minor) { return %minor }
+  if ($prop == patch) { return %patch }
+
+  return $+(%major,.,%minor,.,%patch)
+}
+
+/*
+Configuration Menu
+*/
+menu Status {
+  n3
+  .$_mc(debug,enabled) Debug:toggle debug enabled
+  .$_mc(whois,enabled) $_menu(whois,enabled)
+  ..$_mc(whois,enabled) Enabled:toggle whois enabled
+  ..-
+  ..$_mc(whois,extra.enabled) $_menu(whois,extra.enabled):toggle whois extra.enabled
+  .-
+  .Update:_gidx
+}
+
+/*
+Core Internals
+*/
+; return list of drives letters as c:\,d:\,e:\,...
+alias _drives {
+  var %d, %dc $disk(0)
+  while (%dc) { %d = $addtok(%d,$disk(%dc).path,44) | dec %dc }
+  return %d
+}
+; compare semantic versions
+; $_svg(old version, new version)
+; returns $true if old version is less than new version
+; returns $false in all other cases, including bad input
+alias _svg {
+  var %oldTokens = $numtok($1,46)
+  var %newTokens = $numtok($2,46)
+
+  if (%oldTokens != %newTokens) { return $false }
+  if (%oldTokens < 3 || %newTokens < 3) { return $false }
+
+  var %i = 1
+  while (%i <= %oldTokens && %i <= %newTokens) {
+    var %old = $gettok($1,%i,46)
+    var %new = $gettok($2,%i,46)
+    if (%old > %new) { return $false }
+    if (%new > %old) { return $true }
+    inc %i
+  }
+  return $false
+}
+alias getURL {
+  if ($1) {
+    if ($1 isnum) { 
+      if ($urlget($1).state == fail) { echo -atic notice *** Are you connected to the internet? | halt }
+      @ run line $qt($urlget($1).target)
+
+      .run notepad.exe $qt($urlget($1).target)
+    }
+    else {
+      var %target $+($getdir,getURL.txt)
+      write -c %target
+      @ write line %target
+      return $urlget($1,gf,%target,getURL)
+    }
+  }
+}
+
+
+;;; signals
+on *:SIGNAL:reload: {
+  .timer -m 1 10 reload -rs $script
+}
+on *:SIGNAL:install: {
+  @ main script installation...
+}
+
+;; shortcuts
+alias f5 reload.scripts
+alias f12 toggle debug enabled
+alias reload.signal .signal reload
+;; search for all .nvn files and load them
+alias load.scripts {
+  var %fileCount = $findfile(scripts, *.nvn, 0)
+  var %loadMessage = Loaded:
+  while (%fileCount) {
+    var %file = $findfile(scripts, *.nvn, %fileCount)
+    if (%file) {
+      %loadMessage = %loadMessage $nopath(%file)
+      .timer -m 1 10 .load -rs %file
+    }
+    dec %fileCount
+  }
+  echo 4 -a %loadMessage
+}
+
+;; reload every script
+alias reload.scripts {
+  var %fileCount = $script(0)
+  var %loadMessage = Reloaded:
+  while (%fileCount) {
+    var %file = $script(%fileCount)
+    if (%file) {
+      %loadMessage = %loadMessage $nopath(%file)
+      ; if you reload the executing script directly the script stops running
+      ; delay it with a timer and it works fine
+      .timer -m 1 10 reload -rs %file 
+    }
+    dec %fileCount
+  }
+  @ %loadMessage
+}
+
+; just stop these for now
+on ^*:QUIT:halt
+on ^*:JOIN:#:halt
+on ^*:PART:#:halt
+
+;;; debug
+alias _dbg {
+  if ($_gn3(debug,enabled)) {
+    return $1-
+  }
+}
+
+alias toggle {
+  var %value $_!($_gn3($1,$2))
+  _sn3 $1 $2 %value
+  if ($show) { @ $_menu($1,$2) $+ :  $iif(%value,Enabled,Disabled) }
+
+  ;; enable related group if one exists
+  var %group $_group($1,$2)
+  if ($group(%group)) {
+    if (%value) { .enable %group }
+    else { .disable %group }
+  }
+}
+
+;;;;;;;;; display commands
+alias @ echo -a $chr(124) $1-
+alias @b echo -a $crlf
+alias @t echo -a $+([,$1,.,$2,]_________________)
+alias @p echo -a $+($chr(124),$1,]) $2-
+alias @e echo -a $+(_________________[,end,.,$1,]) $2-
+alias ^ echo 4 -a [ALERT]: $1-
+
+;;;;;;;;; stylez
+
+;;;; script help
+alias _help {
+  var %varCount = $var(__n3.*.enabled)
+  while (%varCount) {
+    @ $var(__n3.*.enabled,%varCount)
+    dec %varCount
+  }
+}
+
+;;;;;;;;; variable helpers
+alias _rt return $replace($1-,$chr(32),.)
+alias _uns unset $+($chr(37),__,$1,.,$2,.*)
+alias _s set $+($chr(37),__,$1,.,$2) $3-
+alias _g return $eval($+($chr(37),__,$_rt($1-)),2)
+alias _! return $iif($1,$false,$true)
+
+#n3.version off
+[nvn.addon]
+id=n3
+name=nihiven
+description=nihiven's cool script from the year 2024
+author=nihiven
+version=0.1.0
+remote=https://nvn.io/n3/nihiven.nvn
+core=$false
+#n3.version end

@@ -1,0 +1,14 @@
+alias booger echo boogers!
+
+
+[nvn.addon]
+id=test
+name=Test
+description=Test Addon
+author=nihiven
+version=1.2.5
+remote=https://nvn.io/n3/test.nvn
+core=$false
+
+[nvn.addon.requirements]
+nihiven=1.10.2

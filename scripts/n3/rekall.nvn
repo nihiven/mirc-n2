@@ -1,0 +1,12 @@
+#rekall off
+[nvn.addon]
+name=Rekall
+description=Variables and Serialization
+author=nihiven
+version=0.1.0
+remote=https://nvn.io/n3/rekall.nvn
+core=$true
+
+[nvn.addon.requirements]
+nihiven=0.1.0
+#rekall end

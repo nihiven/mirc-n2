@@ -1,0 +1,20 @@
+/*
+Third Major Version of nihiven's Music Player
+$sysdir(music)
+*/
+
+alias mp3 {
+
+}
+
+[nvn.addon]
+id=ntunes
+name=nTun3s
+description=Music Manager
+author=nihiven
+version=0.1.0
+remote=https://nvn.io/n3/nTun3s.nvn
+core=$false
+
+[nvn.addon.requirements]
+nihiven=0.1.0

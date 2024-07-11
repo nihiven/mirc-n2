@@ -1,0 +1,78 @@
+
+#n3.whois on
+/*
+***************
+| WHOIS
+*************** 
+*/
+
+alias whois _uns whois $1 | whois $1
+raw 301:*:_rws $2 away $numeric $3- | halt
+raw 311:*:_rws $2 user $numeric $3- | halt
+raw 312:*:_rws $2 server $numeric $3- | halt
+raw 313:*:_rws $2 oper $numeric $3- | @ $+([,$_dbg($+($numeric,/)),oper]) $2- | halt
+raw 317:*:_rws $2 idle $numeric $3- | halt
+raw 318:*:_rws $2 end $numeric $3- | _rws $2 time $ctime | _whois $2 | halt
+raw 319:*:_rws $2 chans $numeric $3- | halt
+raw 330:*:_rws $2 account $numeric $3- | halt
+raw 338:*:_rws $2 actual $numeric $3- | @ $+([,$_dbg($+($numeric,/)),actual]) $2- | halt
+raw 378:*:_rws $2 host $numeric $3- | halt
+raw 671:*:_rws $2 secure $numeric $3- | halt
+raw 401:*:_rws $2 invalid $numeric $3- | halt
+
+; not hooked up
+raw 276:*:^ $+([,$numeric,/fingerprint]) $2- | halt
+raw 307:*:^ $+([,$numeric,/regnick]) $2- | halt
+raw 320:*:^ $+([,$numeric,/special]) $2- | halt
+raw 379:*:^ $+([,$numeric,/modes]) $2- | halt
+
+
+;; set raw whois vars
+alias _rws _s $+(whois.,$1) $2-
+alias _gws return $_g(whois,$+($1,.,$2))
+
+
+alias _whois {
+  ;; display saved whois info
+  var %nick $1
+
+  ; bad nick
+  tokenize 32 $_gws(%nick,invalid)
+  if ($1) { @ $+([whois.,%nick,]): $2- | return }
+
+  ; header
+  @b
+  @ $+([whois.,%nick,])
+
+  ; user
+  tokenize 32 $_gws(%nick,user)
+  if ($1) { @ $+([,$_dbg($+($1,/)),user]) $+($2,@,$3) => $5- }
+
+  ; server
+  tokenize 32 $_gws(%nick,server)
+  if ($1) { @ $+([,$_dbg($+($1,/)),server]) $2 => $3- } 
+
+  ; chans
+  tokenize 32 $_gws(%nick,chans)
+  if ($1) { @ $+([,$_dbg($+($1,/)),chans]) $2- }
+
+  ; away
+  tokenize 32 $_gws(%nick,away)
+  if ($1) { @ $+([,$_dbg($+($1,/)),away]) $2- }
+
+
+  if ($_gn3(whois,extra.enabled)) {
+    ; account
+    tokenize 32 $_gws(%nick,account)
+    @ $+([,$_dbg($+($1,/)),account]) $2 $iif($_gws(%nick,secure),(secure),)
+
+    ; host
+    tokenize 32 $_gws(%nick,host)
+    if ($1) { @ $+([,$_dbg($+($1,/)),host]) $2- }
+
+    ; idle
+    tokenize 32 $_gws(%nick,idle)
+    if ($1) { @ $+([,$_dbg($+($1,/)),idle]) $duration($2) $4- $asctime($3) }
+  }
+}
+#n3.whois end
